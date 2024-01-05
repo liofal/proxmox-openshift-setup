@@ -9,20 +9,28 @@
   become_method: sudo
   gather_facts: no
   tasks:
-  - name: Wait 300 seconds max for kicking off the playbook, but start checking after 5 seconds
+  - name: Wait 120 seconds max for kicking off the playbook, but start checking after 5 seconds
     wait_for_connection:
       delay: 5
-      timeout: 300
+      timeout: 120
   # First, let's make sure the hosts are properly named
   - name: Set hostname
     hostname:
       name: "{{ new_hostname }}"
-  # - name: set timezone to Europe/Brussels
-  #   timezone:
-  #     name: Europe/Brussels
+  - name: set timezone to Europe/Brussels
+    timezone:
+      name: Europe/Brussels
   - name: No SELinux, thanks
     ansible.posix.selinux:
       state: disabled
+  
+  - name: Set static IP for eth1
+    community.general.nmcli:
+      conn_name: eth1
+      ifname: eth1
+      type: ethernet
+      state: present
+      ip4: 192.168.2.196/24
 
   # No local firewall. You've been warned. If you need it, turn it back on afterwards, and ensure it still goes well.
   - name: Stop local firewall
@@ -31,12 +39,6 @@
       # permanent: yes
       name: firewalld
       state: stopped
-
-#  Fix CentOS AppStream repo
-  - name: Fix CentOS 8 AppStream repo in new releases
-    shell: |
-      sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
-      sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
 
   - name: Create directories
     file: 
@@ -51,11 +53,13 @@
       - { name: install_dir,                    owner: ansiblebot,  mode: 0755 }
       - { name: /var/lib/tftpboot/fcos,         owner: root,        mode: 0755 }
       - { name: /var/lib/tftpboot/pxelinux.cfg, owner: root,        mode: 0755 }
-      - { name: /var/nfsshare/registry,         owner: nobody,      mode: 0777 } 
+      # - { name: /var/nfsshare/registry,         owner: nobody,      mode: 0777 } 
       - { name: /etc/dhcp,                      owner: root,        mode: 0755 } 
   
   # Need this here, just to make sure we have a working name resolution for packages installation
   - name: Overwrite resolv.conf
+    tags:
+      - oneshot
     template:
       src:  templates/resolv.conf.j2
       dest: /etc/resolv.conf
@@ -63,6 +67,8 @@
       mode: 0644
 
   - name: Fix NetworkManager.cnf
+    tags:
+      - oneshot
     lineinfile:
       path: /etc/NetworkManager/NetworkManager.conf
       insertafter: '[main]'
@@ -70,22 +76,24 @@
     notify:
       - Restart DNS
   # I added this only for troubleshooting ... will remove
-  # - name: Add aliases
-  #   lineinfile: 
-  #     path: /home/ansiblebot/.bashrc
-  #     insertafter: EOF
-  #     line: "{{ item }}"
-  #   loop:
-  #     - alias ssb="ssh -i .ssh/ssh_okd core@192.168.2.189"
-  #     - alias ssm0="ssh -i ~/.ssh/ssh_okd core@192.168.2.190"
-  #     - alias ssm1="ssh -i ~/.ssh/ssh_okd core@192.168.2.191"
-  #     - alias ssm2="ssh -i ~/.ssh/ssh_okd core@192.168.2.192"
-  #     - alias ssw0="ssh -i ~/.ssh/ssh_okd core@192.168.2.193"
-  #     - alias ssw1="ssh -i ~/.ssh/ssh_okd core@192.168.2.194"
-  #     - alias ssw2="ssh -i ~/.ssh/ssh_okd core@192.168.2.195"   
+  - name: Add aliases
+    lineinfile: 
+      path: /home/ansiblebot/.bashrc
+      insertafter: EOF
+      line: "{{ item }}"
+    loop:
+      - alias ssb="ssh -i .ssh/ssh_okd core@192.168.2.189"
+      - alias ssm0="ssh -i ~/.ssh/ssh_okd core@192.168.2.190"
+      - alias ssm1="ssh -i ~/.ssh/ssh_okd core@192.168.2.191"
+      - alias ssm2="ssh -i ~/.ssh/ssh_okd core@192.168.2.192"
+      - alias ssw0="ssh -i ~/.ssh/ssh_okd core@192.168.2.193"
+      - alias ssw1="ssh -i ~/.ssh/ssh_okd core@192.168.2.194"
+      - alias ssw2="ssh -i ~/.ssh/ssh_okd core@192.168.2.195"
+      - export KUBECONFIG="/home/ansiblebot/install_dir/auth/kubeconfig"
         
   # Setting up DNS, HTTPD, HA Proxy, TFTPD
   - name: install bind, httpd, haproxy, tftp, dhcpd
+
     yum:
       state: present
       name:
@@ -94,7 +102,7 @@
       - httpd
       - haproxy
       - tftp-server 
-      - dhcp-server
+      - dhcp
       - syslinux
     
       update_cache: yes
@@ -113,52 +121,33 @@
       - { src: templates/named.conf.local.j2,     dest: /etc/named/named.conf.local }
       - { src: templates/haproxy.cfg.j2,          dest: /etc/haproxy/haproxy.cfg }
       - { src: templates/dhcpd.conf.j2,           dest: /etc/dhcp/dhcpd.conf }
-      - { src: templates/registry_pv.yaml.j2,     dest: tmp }
+      # - { src: templates/registry_pv.yaml.j2,     dest: tmp }
       - { src: templates/install-config.yaml.j2,  dest: install_dir/install-config.yaml }
     notify:
     - Restart DNS
     - Restart TFTP    # May not be necessary
     - Restart DHCP
+
+  - name: Enable IP forwarding
+    sysctl:
+      name: net.ipv4.ip_forward
+      value: 1
+      sysctl_set: yes
+      state: present
+      reload: yes
+
+  - name: Set up IP masquerading for VLAN1 to VLAN2
+    tags:
+      - oneshot
+    ansible.builtin.iptables:
+      table: nat
+      chain: POSTROUTING
+      out_interface: eth0
+      jump: MASQUERADE
+      
+  - name: Save iptables settings
+    ansible.builtin.shell: iptables-save > /etc/sysconfig/iptables
   
-
-# Firewall ports to open
-  # - name: Stop local firewall
-  #   firewalld:
-  #     # port: "{{ item }}"
-  #     # permanent: yes
-  #     state: stopped
-    # I'm not collecting facts yet ... 
-    #when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
-    # loop:
-    #   - 53/udp      # DNS
-    #   - 69/tcp      # Troubleshooting some issues, shouldn't be necessary 
-    #   - 80/tcp      # HTTP
-    #   - 111/tcp
-    #   - 111/udp		# NFS
-    #   - 443/tcp     # HTTPS
-    #   # - 635/tcp
-    #   # - 635/udp
-    #   - 4011/udp
-    #   - 4011/tcp
-    #   - 6443/tcp 
-    #   - 8080/tcp
-    #   - 22623/tcp
-    # notify:
-    #   - Restart FW
-
-  # - name: open firewall services
-  #   firewalld:
-  #     service: "{{ item }}"
-  #     permanent: yes
-  #     state: enabled
-  #   loop:
-  #     - nfs
-  #     - rpc-bind
-  #     - mountd
-  #     - tftp
-  #   notify:
-  #     - Restart FW
-
   # Run it more than once, and it'll add 80 ... and 80 ... 
   - name: change httpd port
     lineinfile:
@@ -178,11 +167,7 @@
       - haproxy
       - httpd 
       - tftp
-      # - nfs-server
       - dhcpd
-#      - rpcbind
-
-
 
 - name: Setup OKD services
   hosts: service
@@ -243,27 +228,14 @@
         line: "sshKey: '{{ sshkey }}' " 
         backup: yes
 
-    # Get the pull secret from ~/pull_secret.txt. If you don't have one, create the file and add '{"auths":{"fake":{"auth": "bar"}}}' as the content
-    - name: Add Pull Secret to install-config.yaml
-      vars:
-        pull: "{{ lookup('file', './files/pull_secret.txt') }}"
-      lineinfile: 
-        path: /home/ansiblebot/install_dir/install-config.yaml
-        regexp: '^pullSecret:'
-        # To make sure you don't run into escaping quotes, double quotes... 
-        #just make sure your pull secret in the file is between single quotes, and double quotes everywhere else :!env_var 
-        # For instance: '{"auths":{"fake":{"auth": "bar"}}}'
-        line: "pullSecret: {{ pull }}"   
-        backup: yes
-
     # Let's create the proper OKD installation files (ignition, manifests, ...)
     - name: Create the install files
       shell: |
-        /usr/local/bin/openshift-install create manifests --dir=/home/ansiblebot/install_dir/
         cp /home/ansiblebot/install_dir/install-config.yaml /home/ansiblebot/install-config.back
-        sed -i 's/mastersSchedulable: true/mastersSchedulable: False/' /home/ansiblebot/install_dir/manifests/cluster-scheduler-02-config.yml
+        /usr/local/bin/openshift-install create manifests --dir=/home/ansiblebot/install_dir/
+        sed -i 's/mastersSchedulable: false/mastersSchedulable: true/' /home/ansiblebot/install_dir/manifests/cluster-scheduler-02-config.yml
         /usr/local/bin/openshift-install create ignition-configs --dir=/home/ansiblebot/install_dir/
-
+        
     # Make these files available on the Web server
     - name: Copy all files to www directories
       shell: cp -R /home/ansiblebot/install_dir/* /var/www/html/okd4/

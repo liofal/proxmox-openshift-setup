@@ -3,28 +3,31 @@ baseDomain: {{ dns.domain }}
 metadata:
   name: {{ dns.clusterid }}
 
+capabilities:
+  baselineCapabilitySet: v4.12
+  additionalEnabledCapabilities:
+    - CSISnapshot
+    - Insights
+    - Storage
+    
 compute:
-- hyperthreading: Enabled
-  name: worker
-  replicas: 3
+  - name: worker
+    replicas: 0
 
 controlPlane:
-  hyperthreading: Enabled
   name: master
   replicas: 3
 
 networking:
-  machineNetwork:
-  - cidr: 192.168.2.0/24    # May not be necessary, but it's a left over from my tests ... will
   clusterNetwork:
   - cidr: 10.128.0.0/14 
     hostPrefix: 23 
-  networkType: OVNKubernetes
+  networkType: OpenShiftSDN
   serviceNetwork: 
   - 172.30.0.0/16
 
 platform:
   none: {}
 
-pullSecret: "{'auths':{'fake':{'auth': 'bar'}}}"
+pullSecret: '{"auths":{"fake":{"auth":"aWQ6cGFzcwo="}}}'
 sshKey: 'ssh-ed25519 AAAA...'   

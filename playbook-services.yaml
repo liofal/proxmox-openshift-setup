@@ -67,8 +67,6 @@
       mode: 0644
 
   - name: Fix NetworkManager.cnf
-    tags:
-      - oneshot
     lineinfile:
       path: /etc/NetworkManager/NetworkManager.conf
       insertafter: '[main]'
@@ -92,7 +90,7 @@
       - export KUBECONFIG="/home/ansiblebot/install_dir/auth/kubeconfig"
         
   # Setting up DNS, HTTPD, HA Proxy, TFTPD
-  - name: install bind, httpd, haproxy, tftp, dhcpd
+  - name: install bind, httpd, haproxy, tftp, dhcpd, yum-cron
 
     yum:
       state: present
@@ -104,6 +102,7 @@
       - tftp-server 
       - dhcp
       - syslinux
+      - yum-cron
     
       update_cache: yes
 
@@ -137,8 +136,6 @@
       reload: yes
 
   - name: Set up IP masquerading for VLAN1 to VLAN2
-    tags:
-      - oneshot
     ansible.builtin.iptables:
       table: nat
       chain: POSTROUTING
@@ -168,6 +165,7 @@
       - httpd 
       - tftp
       - dhcpd
+      - yum-cron
 
 - name: Setup OKD services
   hosts: service

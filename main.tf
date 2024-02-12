@@ -28,14 +28,14 @@ locals {
     "master0"      = { macaddr = "7A:00:00:00:03:01", cores = 4, ram = 12288, vmid = 801, os = "pxe-client", boot = true },
     "master1"      = { macaddr = "7A:00:00:00:03:02", cores = 4, ram = 12288, vmid = 802, os = "pxe-client", boot = true },
     "master2"      = { macaddr = "7A:00:00:00:03:03", cores = 4, ram = 12288, vmid = 803, os = "pxe-client", boot = true },
-    "worker0"      = { macaddr = "7A:00:00:00:03:04", cores = 4, ram = 12288, vmid = 804, os = "pxe-client", boot = true },
-    # "worker1"      = { macaddr = "7A:00:00:00:03:05", cores = 2, ram = 8192, vmid = 805, os = "pxe-client", boot = true },
-    # "worker2"      = { macaddr = "7A:00:00:00:03:06", cores = 2, ram = 8192, vmid = 806, os = "pxe-client", boot = true },
+    "worker0"      = { macaddr = "7A:00:00:00:03:04", cores = 2, ram = 12288, vmid = 804, os = "pxe-client", boot = true },
+    # "worker1"      = { macaddr = "7A:00:00:00:03:05", cores = 2, ram = 4096, vmid = 805, os = "pxe-client", boot = true },
+    # "worker2"      = { macaddr = "7A:00:00:00:03:06", cores = 2, ram = 4096, vmid = 806, os = "pxe-client", boot = true },
     # "bootstrap"    = { macaddr = "7A:00:00:00:03:07", cores = 4, ram = 12288, vmid = 807, os = "pxe-client", boot = true },
     # "bootstrap2"    = { macaddr = "7A:00:00:00:03:09", cores = 4, ram = 8192, vmid = 809, os = "a2cent", boot = false },
   }
   services_settings = {
-    "okd-services" = { macaddr = "7A:00:00:00:03:08", cores = 4, ram = 12288, vmid = 808, os = "a2cent", boot = true }
+    "okd-services" = { macaddr = "7A:00:00:00:03:08", cores = 4, ram = 4096, vmid = 808, os = "a2cent", boot = true }
   }
   bridge = "vmbr0"
   vlan   = 2
@@ -50,7 +50,7 @@ resource "proxmox_vm_qemu" "cloudinit-nodes" {
   vmid        = each.value.vmid
   target_node = var.target_host
   clone       = each.value.os
-  full_clone  = true
+  full_clone = false
   boot        = "order=scsi0;net0" # "c" by default, which renders the coreos35 clone non-bootable. "cdn" is HD, DVD and Network
   oncreate    = each.value.boot         # start once created
   agent       = 0
@@ -84,7 +84,7 @@ resource "proxmox_vm_qemu" "cloudinit-services" {
   vmid        = each.value.vmid
   target_node = var.target_host
   clone       = each.value.os
-  full_clone  = true
+  full_clone  = false
   boot        = "order=scsi0;net0" # "c" by default, which renders the coreos35 clone non-bootable. "cdn" is HD, DVD and Network
   oncreate    = each.value.boot         # start once created
   agent       = 0

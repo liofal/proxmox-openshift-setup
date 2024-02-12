@@ -3,13 +3,6 @@ baseDomain: {{ dns.domain }}
 metadata:
   name: {{ dns.clusterid }}
 
-capabilities:
-  baselineCapabilitySet: v4.12
-  additionalEnabledCapabilities:
-    - CSISnapshot
-    - Insights
-    - Storage
-    
 compute:
   - name: worker
     replicas: 0

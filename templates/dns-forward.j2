@@ -30,6 +30,7 @@ api-int.{{ dns.clusterid }}.{{ dns.domain }}.   IN    A    {{ valet.ip }}
 etcd-{{ loop.index0 }}.{{ dns.clusterid }}.{{ dns.domain }}.    IN    A     {{ machine.ip}}
 {% endfor %}
 console-openshift-console.apps.{{ dns.clusterid }}.{{ dns.domain }}.     IN     A     {{ valet.ip }}
+router-default.apps..{{ dns.clusterid }}.{{ dns.domain }}.     IN     A     {{ valet.ip }}
 oauth-openshift.apps.{{ dns.clusterid }}.{{ dns.domain }}.               IN     A     {{ valet.ip }}
 
 

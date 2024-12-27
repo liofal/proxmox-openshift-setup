@@ -6,7 +6,7 @@
 	"image": "mcr.microsoft.com/devcontainers/base:jammy",
 	"features": {
 		"ghcr.io/robbert229/devcontainer-features/opentofu:1": {},
-		"ghcr.io/devcontainers-contrib/features/ansible:2": {}
+		"ghcr.io/devcontainers-extra/features/ansible:2": {}
 	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.

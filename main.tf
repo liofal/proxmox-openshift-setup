@@ -26,7 +26,7 @@ resource "proxmox_vm_qemu" "service-node" {
     scsi {
       scsi0 {
         disk {
-          storage = "vm-data"
+          storage = "local-lvm"
           size    = "120G"
           discard = true
         }
@@ -35,7 +35,7 @@ resource "proxmox_vm_qemu" "service-node" {
     ide {
       ide0 {
         cloudinit {
-          storage = "vm-data"
+          storage = "local-lvm"
         }
       }
     }
@@ -93,7 +93,7 @@ resource "proxmox_vm_qemu" "pxe-nodes" {
     slot    = "scsi0"
     size    = "200G"
     type    = "disk"
-    storage = "VM-DATA"
+    storage = "local-lvm"
     discard = true
     #iothread = 1
   }

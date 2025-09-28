@@ -54,12 +54,22 @@ files/openshift-install*
 files/pull*secret*
 files/centos-qemu*
 files/htpass*
+files/id_rsa*
 install_dir
 manifests
 files/ssl*
 .openshift*
 
+# Environment and secret files
+.env
+*.env
+*secret*
+*pull*secret*
 
+# SSH keys
+files/*_rsa*
+files/*.pem
+files/*.key
 
 .terraform
 .gitignore

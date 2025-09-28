@@ -1,7 +1,7 @@
 #
 domain: homelab.local
 clusterid: okd
-resolver: 192.168.1.5
+resolver: 192.168.1.105
 hypervisor: 192.168.1.101
 bridge: vmbr1
 vlan: 2

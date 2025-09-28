@@ -48,11 +48,11 @@ resource "proxmox_vm_qemu" "service-node" {
     macaddr = local.service.macaddr
   }
 
-  # cloud-init config 
+  # cloud-init config
   cicustom   = "vendor=local:snippets/centos-qemu-agent.yml" # This installs the Qemu Guest Agent. Install the file in /var/lib/vz/snippets on proxmox host
   ciupgrade  = true
   nameserver = local.network.resolver
-  ipconfig0  = "ip=dhcp"
+  ipconfig0  = "ip=${local.service.ip}/24,gw=${local.network.hypervisor}"
   skip_ipv6  = true
   ciuser     = var.ansible_user
   cipassword = var.ansible_pwd
@@ -104,6 +104,12 @@ resource "proxmox_vm_qemu" "pxe-nodes" {
     tag     = local.network.vlan
     macaddr = each.value.macaddr
   }
+
+  # cloud-init config for PXE nodes
+  nameserver = local.network.resolver
+  ipconfig0  = "ip=${each.value.ip}/24,gw=${local.network.hypervisor}"
+  skip_ipv6  = true
+
   lifecycle {
     ignore_changes = [pool, disk, bootdisk]
   }

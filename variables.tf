@@ -65,3 +65,9 @@ variable "vm_name_prefix" {
   type        = string
   default     = "okd"
 }
+
+variable "manage_pool" {
+  description = "Create the Proxmox pool automatically"
+  type        = bool
+  default     = false
+}

@@ -11,7 +11,9 @@ locals {
     cores   = local.nodes.service.cores
     ram     = local.nodes.service.ram
     ip      = local.nodes.service.ip
+    mgmt_ip = local.nodes.service.mgmt_ip
     macaddr = local.nodes.service.macaddr
+    mgmt_macaddr = local.nodes.service.mgmt_macaddr
     vmid    = local.main.vmbase + local.nodes.service.vmid
     os      = local.main.service_os
     boot    = "started"

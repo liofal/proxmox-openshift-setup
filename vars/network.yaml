@@ -3,8 +3,11 @@ domain: homelab.local
 clusterid: okd
 resolver: 192.168.1.105
 hypervisor: 192.168.1.101
-bridge: vmbr1
+bridge: vmbr0
 vlan: 2
+mgmt_bridge: vmbr0
+mgmt_vlan: 0
+mgmt_prefix: 24
 masters_schedulable: false
 home_subnet: 192.168.1.0/24
 lab_cidr: 192.168.2.0/24

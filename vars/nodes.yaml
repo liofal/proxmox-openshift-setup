@@ -35,7 +35,9 @@ workers:
 service:
   name: okd-service
   ip: 192.168.2.196
+  mgmt_ip: 192.168.1.116
   macaddr: 7A:00:00:00:03:08
+  mgmt_macaddr: 7A:00:00:00:13:08
   cores: 2
   ram: 4096
   vmid: 0

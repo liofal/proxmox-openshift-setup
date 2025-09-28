@@ -37,3 +37,75 @@
     src: files/approve-csr.sh
     dest: approve-csr.sh
     mode: 0755
+
+- name: Enable IPv4 forwarding permanently
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+    reload: yes
+
+- name: Ensure firewalld is installed
+  package:
+    name: firewalld
+    state: present
+
+- name: Ensure firewalld is running
+  service:
+    name: firewalld
+    state: started
+    enabled: yes
+
+- name: Detect management interface
+  shell: "ip -o -4 addr show | awk '$4 ~ /{{ service.mgmt_ip }}\\// {print $2}' | head -n1"
+  register: mgmt_iface_cmd
+  changed_when: false
+
+- name: Detect lab interface
+  shell: "ip -o -4 addr show | awk '$4 ~ /{{ service.ip }}\\// {print $2}' | head -n1"
+  register: lab_iface_cmd
+  changed_when: false
+
+- name: Set interface facts
+  set_fact:
+    service_mgmt_iface: "{{ mgmt_iface_cmd.stdout | trim }}"
+    service_lab_iface: "{{ lab_iface_cmd.stdout | trim }}"
+
+- name: Validate detected interfaces
+  assert:
+    that:
+      - service_mgmt_iface | length > 0
+      - service_lab_iface | length > 0
+    fail_msg: "Unable to detect service node interfaces for NAT configuration"
+
+- name: Assign management interface to external zone
+  ansible.posix.firewalld:
+    zone: external
+    interface: "{{ service_mgmt_iface }}"
+    state: enabled
+    permanent: yes
+    immediate: yes
+
+- name: Enable masquerade on management zone
+  ansible.posix.firewalld:
+    zone: external
+    masquerade: yes
+    state: enabled
+    permanent: yes
+    immediate: yes
+
+- name: Assign lab interface to trusted zone
+  ansible.posix.firewalld:
+    zone: trusted
+    interface: "{{ service_lab_iface }}"
+    state: enabled
+    permanent: yes
+    immediate: yes
+
+- name: Allow lab network forwarding through service node
+  ansible.posix.firewalld:
+    zone: trusted
+    state: enabled
+    rich_rule: 'rule family="ipv4" source address="{{ lab_cidr }}" accept'
+    permanent: yes
+    immediate: yes

@@ -43,6 +43,14 @@ resource "proxmox_vm_qemu" "service-node" {
   network {
     id      = 0
     model   = "virtio"
+    bridge  = local.network.mgmt_bridge
+    macaddr = local.service.mgmt_macaddr
+    tag     = local.network.mgmt_vlan == 0 ? null : local.network.mgmt_vlan
+  }
+
+  network {
+    id      = 1
+    model   = "virtio"
     bridge  = local.network.bridge
     tag     = local.network.vlan
     macaddr = local.service.macaddr
@@ -52,7 +60,8 @@ resource "proxmox_vm_qemu" "service-node" {
   cicustom   = "vendor=local:snippets/centos-qemu-agent.yml" # This installs the Qemu Guest Agent. Install the file in /var/lib/vz/snippets on proxmox host
   ciupgrade  = true
   nameserver = local.network.resolver
-  ipconfig0  = "ip=${local.service.ip}/24,gw=${local.network.hypervisor}"
+  ipconfig0  = "ip=${local.service.mgmt_ip}/${local.network.mgmt_prefix}"
+  ipconfig1  = "ip=${local.service.ip}/24,gw=${local.network.lab_gw}"
   skip_ipv6  = true
   ciuser     = var.ansible_user
   cipassword = var.ansible_pwd
@@ -107,7 +116,7 @@ resource "proxmox_vm_qemu" "pxe-nodes" {
 
   # cloud-init config for PXE nodes
   nameserver = local.network.resolver
-  ipconfig0  = "ip=${each.value.ip}/24,gw=${local.network.hypervisor}"
+  ipconfig0  = "ip=${each.value.ip}/24,gw=${local.network.lab_gw}"
   skip_ipv6  = true
 
   lifecycle {
@@ -116,7 +125,8 @@ resource "proxmox_vm_qemu" "pxe-nodes" {
 }
 
 resource "proxmox_pool" "cluster" {
-  poolid  = "${local.main.target}-cluster-${local.main.env}"
+  count   = var.manage_pool ? 1 : 0
+  poolid  = "${local.main.target}-cluster"
   comment = "All ${local.main.target} VMs"
 }
 
@@ -124,6 +134,7 @@ resource "local_file" "ansible_inventory" {
   content = templatefile("templates/hosts.tmpl",
     {
       service_ip    = local.service.ip
+      service_mgmt_ip = local.service.mgmt_ip
       bootstrap_ip  = local.bootstrap.ip
       masters       = [for j in local.masters : j.ip]
       workers       = [for j in local.workers : j.ip]

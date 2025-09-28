@@ -1,5 +1,5 @@
 [service]
-${ service_ip }
+${ service_mgmt_ip } ansible_ssh_private_key_file=files/id_rsa
 
 [bootstrap]
 ${ bootstrap_ip }
@@ -13,3 +13,6 @@ ${ i }
 %{ for i in workers ~}
 ${ i }
 %{ endfor ~}
+
+[proxmox]
+proxmox ansible_host=${ hypervisor_ip } ansible_user=ansible ansible_become=true ansible_become_method=sudo ansible_ssh_private_key_file=~/.ssh/keys/proxmox-ansible

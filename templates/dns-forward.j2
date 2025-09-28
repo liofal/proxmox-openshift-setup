@@ -30,4 +30,5 @@ api-int.{{ clusterid }}.{{ domain }}.   IN    A    {{ service.ip }}
 etcd-{{ loop.index0 }}.{{ clusterid }}.{{ domain }}.    IN    A     {{ machine.ip}}
 {% endfor %}
 console-openshift-console.apps.{{ clusterid }}.{{ domain }}.     IN     A     {{ service.ip }}
+router-default.apps.{{ clusterid }}.{{ domain }}.               IN     A     {{ service.ip }}
 oauth-openshift.apps.{{ clusterid }}.{{ domain }}.               IN     A     {{ service.ip }}

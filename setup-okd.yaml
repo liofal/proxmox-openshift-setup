@@ -151,30 +151,40 @@
     - vars/main.yaml
     - vars/nodes.yaml
     - vars/network.yaml
-  become: yes
-  become_method: sudo
   gather_facts: no
   tasks:
+    - name: Check bootstrap status
+      command: sudo -n qm status "{{ bootstrap.vmid + vmbase }}"
+      register: bootstrap_status
+      changed_when: false
+
     - name: Start bootstrap
-      shell: qm start "{{ bootstrap.vmid + vmbase}}"
+      command: sudo -n qm start "{{ bootstrap.vmid + vmbase }}"
+      when: "'status: running' not in bootstrap_status.stdout"
 
 # Bootstrap node is booting up, let's run the command that will create the tiny bootstrap cluster ...
 
 - name: Start bootstrapping sequence
   hosts: service
+  vars_files:
+    - vars/main.yaml
+    - vars/okd-version.yaml
   gather_facts: no
   tasks:
     - name: Starting bootstrap process
-      shell: /usr/local/bin/openshift-install --dir=install_dir/ wait-for bootstrap-complete --log-level=debug > tmp/bootstrap.log 2>&1
-      async: 3600
+      shell: |
+        timeout {{ bootstrap_timeout_seconds }}s /usr/local/bin/openshift-install wait-for bootstrap-complete --log-level=debug &> ../tmp/bootstrap.log
+      args:
+        chdir: install_dir
+      async: "{{ bootstrap_timeout_seconds }}"
       poll: 0
 
     # Now we wait for the magiv message ending with "for bootstrapping to complete..." that indicates the bootstrap node is up and running
     - name: Wait for the message saying the control plane nodes should be started
       command:
         cmd: grep "for bootstrapping to complete..." tmp/bootstrap.log
-      retries: 720
-      delay: 5
+      retries: "{{ bootstrap_wait_retries }}"
+      delay: "{{ bootstrap_wait_delay }}"
       register: grp
       until: grp.stdout.find ("for bootstrapping to complete...") != -1
 
@@ -186,19 +196,27 @@
     - vars/main.yaml
     - vars/nodes.yaml
     - vars/network.yaml
-  become: yes
-  become_method: sudo
   gather_facts: no
   tasks:
-    - name: Deploy OKD control plane nodes
-      shell: qm start {{ item.vmid + vmbase}}
+    - name: Check control plane node status
+      command: sudo -n qm status {{ item.vmid + vmbase}}
       loop: "{{ masters }}"
+      register: master_status
+      changed_when: false
+
+    - name: Ensure control plane node running
+      command: sudo -n qm start {{ item.item.vmid + vmbase}}
+      loop: "{{ master_status.results }}"
+      when: "'status: running' not in item.stdout"
 
 # The control plane nodes are now up and running, we just patiently wait for them to join the cluster
 - name: Finish bootstrapping sequence
   hosts: service
   handlers:
     - import_tasks: handlers/main.yaml
+  vars_files:
+    - vars/main.yaml
+    - vars/okd-version.yaml
   gather_facts: no
   become: yes
   become_method: sudo
@@ -206,8 +224,8 @@
     - name: Deploying control plane nodes
       command:
         cmd: grep "safe to remove the bootstrap" tmp/bootstrap.log
-      retries: 720
-      delay: 5
+      retries: "{{ bootstrap_wait_retries }}"
+      delay: "{{ bootstrap_wait_delay }}"
       register: grp
       until: grp.stdout.find ("safe to remove the bootstrap") != -1
 
@@ -227,8 +245,6 @@
   vars_files:
     - vars/nodes.yaml
     - vars/main.yaml
-  become: yes
-  become_method: sudo
   gather_facts: no
   tasks:
     - import_tasks: tasks/stop_bootstrap_start_workers.yaml
@@ -236,6 +252,9 @@
 # In this section, we run the final piece of the installation, and we wait for the worker nodes to join the cluster.
 - name: Wait for installation to be finished
   hosts: service
+  vars_files:
+    - vars/main.yaml
+    - vars/okd-version.yaml
   gather_facts: no
   tasks:
     - import_tasks: tasks/workers.yaml

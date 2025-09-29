@@ -1,6 +1,9 @@
 - name: Starting worker node installation
-  shell: /usr/local/bin/openshift-install --dir=install_dir/ wait-for install-complete --log-level=debug > tmp/worker.log 2>&1
-  async: 3600
+  shell: |
+    timeout {{ install_timeout_seconds }}s /usr/local/bin/openshift-install wait-for install-complete --log-level=debug &> ../tmp/worker.log
+  args:
+    chdir: install_dir
+  async: "{{ install_timeout_seconds }}"
   poll: 0
 # There's a need to approve pending certificate. That's what the "approve-csr.sh" does. Every 10 seconds, it tries to approve all pending CSRs ...
 # And does it for 1h (should be more than enough)
@@ -14,8 +17,8 @@
 - name: Wait for the proper output
   command:
     cmd: grep "Install complete" tmp/worker.log
-  retries: 720
-  delay: 5
+  retries: "{{ install_wait_retries }}"
+  delay: "{{ install_wait_delay }}"
   register: grp
   until: grp.stdout.find ("Install complete") != -1
 

@@ -1,6 +1,19 @@
+- name: Check bootstrap status before stopping
+  command: sudo -n qm status {{ bootstrap.vmid + vmbase }}
+  register: bootstrap_status
+  changed_when: false
+
 - name: Stop bootstrap node
-  shell: qm stop {{ bootstrap.vmid + vmbase }}
+  command: sudo -n qm stop {{ bootstrap.vmid + vmbase }}
+  when: "'status: running' in bootstrap_status.stdout"
+
+- name: Check worker node status
+  command: sudo -n qm status {{ item.vmid + vmbase }}
+  loop: "{{ workers }}"
+  register: worker_status
+  changed_when: false
 
 - name: Start worker nodes
-  shell: qm start {{ item.vmid + vmbase }}
-  loop: "{{ workers }}"
+  command: sudo -n qm start {{ item.item.vmid + vmbase }}
+  loop: "{{ worker_status.results }}"
+  when: "'status: running' not in item.stdout"

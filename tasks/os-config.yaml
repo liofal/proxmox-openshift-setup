@@ -94,6 +94,19 @@
     permanent: yes
     immediate: yes
 
+- name: Allow OKD ingress ports on management zone
+  ansible.posix.firewalld:
+    zone: external
+    port: "{{ item }}"
+    state: enabled
+    permanent: yes
+    immediate: yes
+  loop:
+    - 80/tcp
+    - 443/tcp
+    - 6443/tcp
+    - 22623/tcp
+
 - name: Assign lab interface to trusted zone
   ansible.posix.firewalld:
     zone: trusted
@@ -109,3 +122,23 @@
     rich_rule: 'rule family="ipv4" source address="{{ lab_cidr }}" accept'
     permanent: yes
     immediate: yes
+
+- name: Install dnsmasq for PXE/DHCP
+  package:
+    name: dnsmasq
+    state: present
+
+- name: Configure dnsmasq for lab network
+  template:
+    src: templates/dnsmasq.conf.j2
+    dest: /etc/dnsmasq.d/okd.conf
+    owner: root
+    mode: 0644
+  notify:
+    - Restart dnsmasq
+
+- name: Ensure dnsmasq is running
+  service:
+    name: dnsmasq
+    state: started
+    enabled: yes

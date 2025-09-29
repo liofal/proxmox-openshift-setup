@@ -1,0 +1,17 @@
+port=0
+interface={{ service_lab_iface }}
+bind-interfaces
+log-dhcp
+
+dhcp-range={{ lab_dhcp_start }},{{ lab_dhcp_stop }},12h
+{% if lab_gw is defined %}dhcp-option=option:router,{{ lab_gw }}
+{% endif %}dhcp-option=option:dns-server,{{ service.ip }}
+
+dhcp-host={{ bootstrap.macaddr|lower }},{{ bootstrap.ip }},{{ bootstrap.name }}.{{ clusterid }}.{{ domain }}
+{% for master in masters %}dhcp-host={{ master.macaddr|lower }},{{ master.ip }},{{ master.name }}.{{ clusterid }}.{{ domain }}
+{% endfor %}{% for worker in workers %}dhcp-host={{ worker.macaddr|lower }},{{ worker.ip }},{{ worker.name }}.{{ clusterid }}.{{ domain }}
+{% endfor %}
+
+enable-tftp
+tftp-root=/var/lib/tftpboot
+dhcp-boot=pxelinux.0

@@ -14,9 +14,19 @@
     name: tftp
     state: restarted
 
+- name: Restart dnsmasq
+  service:
+    name: dnsmasq
+    state: restarted
+
 - name: Restart DHCP
   service:
     name: dhcpd
+    state: restarted
+
+- name: Restart HA
+  service:
+    name: haproxy
     state: restarted
 
 - name: Stop FW

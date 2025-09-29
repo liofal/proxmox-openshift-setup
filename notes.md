@@ -122,3 +122,21 @@ configmap/admin-acks patched
 - After starting `httpd` (Listen 8080) and `haproxy`, PXE downloads succeeded; bootstrap reached `Waiting up to 45m0s for bootstrapping to complete…`, and all three masters are cycling through the expected FCOS rpm-ostree reboot before CNI comes up.
 - Current view: `oc get nodes` shows all masters `NotReady` while OVN/Multus pods pull; `oc get csr` confirms certificates are auto-approved; etcd operator pod is running and image pulls from quay succeed from the masters.
 - Next actions: let bootstrapping finish, watch `tmp/bootstrap.log` for “safe to remove the bootstrap”, then remove bootstrap backends from `/etc/haproxy/haproxy.cfg`, stop VM 407, and proceed with the worker/installer wait-for steps per README timing.
+
+## 2025-09-29 etcd Backup
+- Snapshot taken from `master0.okd.liofal.net` using the builtin script:
+  ```bash
+  export KUBECONFIG=~/install_dir/auth/kubeconfig
+  oc debug node/master0.okd.liofal.net -- chroot /host \
+    sudo /usr/local/bin/cluster-backup.sh /var/home/core/etcd-backup
+  ```
+- Artifacts copied to the service host under `~/backups/etcd-2025-09-29/` and synced locally to `backups/` in this repo:
+  - `snapshot_2025-09-29_065350.db`
+  - `static_kuberesources_2025-09-29_065350.tar.gz`
+- Restore run-book (per OKD docs):
+  1. Copy the snapshot directory back to a master (e.g. `/home/core/etcd-backup`).
+  2. Stop static pods by moving manifests out of `/etc/kubernetes/manifests` on all masters.
+  3. On one master, run `sudo -i /usr/local/bin/cluster-restore.sh <snapshot-dir>`; answer prompts to clean out `/var/lib/etcd` and apply the snapshot.
+  4. Copy the refreshed `static-pod-resources` bundle to the remaining masters.
+  5. Return manifests, reboot masters, and verify etcd members come up (`oc get nodes`, `oc get co`).
+- After restore, re-run `ansible-playbook setup-okd.yaml --tags hosts` if IPs/NAT changed before bringing workers back online.

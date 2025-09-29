@@ -18,11 +18,13 @@ networking:
   - cidr: 10.128.0.0/14 
     hostPrefix: 23 
   networkType: OVNKubernetes
+  machineNetwork:
+  - cidr: {{ lab_cidr }}
   serviceNetwork: 
   - 172.30.0.0/16
 
 platform:
   none: {}
 
-pullSecret: "{'auths':{'fake':{'auth': 'bar'}}}"
+pullSecret: "{'auths':{'fake':{'auth':'aWQ6cGFzcwo='}}}"
 sshKey: 'ssh-ed25519 AAAA...'   

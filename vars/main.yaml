@@ -18,3 +18,11 @@ cilium_version: 1.15.1
 user:
   name: ansible
   home: /home/ansible
+
+# Automation timing controls (seconds)
+bootstrap_timeout_seconds: 3600
+bootstrap_wait_retries: 240
+bootstrap_wait_delay: 5
+install_timeout_seconds: 7200
+install_wait_retries: 720
+install_wait_delay: 5

@@ -22,6 +22,10 @@ resource "proxmox_vm_qemu" "service-node" {
   bootdisk = "scsi0"
   hotplug  = 0
 
+  vga {
+    type = "virtio"
+  }
+
   disks {
     scsi {
       scsi0 {
@@ -60,8 +64,8 @@ resource "proxmox_vm_qemu" "service-node" {
   cicustom   = "vendor=local:snippets/centos-qemu-agent.yml" # This installs the Qemu Guest Agent. Install the file in /var/lib/vz/snippets on proxmox host
   ciupgrade  = true
   nameserver = local.network.resolver
-  ipconfig0  = "ip=${local.service.mgmt_ip}/${local.network.mgmt_prefix}"
-  ipconfig1  = "ip=${local.service.ip}/24,gw=${local.network.lab_gw}"
+  ipconfig0  = "ip=${local.service.mgmt_ip}/${local.network.mgmt_prefix},gw=${local.network.mgmt_gateway}"
+  ipconfig1  = "ip=${local.service.ip}/24"
   skip_ipv6  = true
   ciuser     = var.ansible_user
   cipassword = var.ansible_pwd
@@ -120,7 +124,7 @@ resource "proxmox_vm_qemu" "pxe-nodes" {
   skip_ipv6  = true
 
   lifecycle {
-    ignore_changes = [pool, disk, bootdisk]
+    ignore_changes = [pool, disk, bootdisk, vm_state]
   }
 }
 

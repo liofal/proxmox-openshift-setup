@@ -1,19 +1,20 @@
 #
-domain: homelab.local
+domain: liofal.net
 clusterid: okd
 resolver: 192.168.1.105
-hypervisor: 192.168.1.101
-bridge: vmbr0
+hypervisor: proxmox.liofal.net
+bridge: vmbr0v2
 vlan: 2
 mgmt_bridge: vmbr0
 mgmt_vlan: 0
 mgmt_prefix: 24
+mgmt_gateway: 192.168.1.1
 masters_schedulable: false
 home_subnet: 192.168.1.0/24
 lab_cidr: 192.168.2.0/24
-network_type: Cilium #or use OCK/OCP default, OVNKubernetes
+network_type: OVNKubernetes
 lab_subnet: 192.168.2.0
 lab_dhcp_start: 192.168.2.100
 lab_dhcp_stop: 192.168.2.150
 lab_broadcast: 192.168.2.255
-lab_gw: 192.168.2.1
+lab_gw: 192.168.2.196

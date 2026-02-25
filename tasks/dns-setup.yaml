@@ -24,3 +24,26 @@
     - { src: templates/install-config.yaml.j2, dest: install_dir/install-config.yaml }
   notify:
     - Restart DNS
+
+- name: Ensure BIND is enabled after reboot
+  service:
+    name: named
+    state: started
+    enabled: yes
+
+- name: Ensure dnsmasq override directory exists
+  file:
+    path: /etc/systemd/system/dnsmasq.service.d
+    state: directory
+    owner: root
+    mode: "0755"
+
+- name: Deploy dnsmasq systemd override
+  template:
+    src: templates/dnsmasq.override.conf.j2
+    dest: /etc/systemd/system/dnsmasq.service.d/override.conf
+    owner: root
+    mode: "0644"
+  notify:
+    - Reload systemd
+    - Restart dnsmasq

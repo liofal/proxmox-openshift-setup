@@ -19,6 +19,9 @@
     name: dnsmasq
     state: restarted
 
+- name: Reload systemd
+  command: systemctl daemon-reload
+
 - name: Restart DHCP
   service:
     name: dhcpd
